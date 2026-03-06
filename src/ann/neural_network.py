@@ -2,70 +2,153 @@
 Main Neural Network Model class
 Handles forward and backward propagation loops
 """
+
 import numpy as np
+from neural_layer import Dense
+from activations import ReLU, Sigmoid, Tanh
+from objective_functions import MeanSquaredError, CrossEntropyLoss
+
 
 class NeuralNetwork:
-    """
-    Main model class that orchestrates the neural network training and inference.
-    """
 
     def __init__(self, cli_args):
-        pass
+
+        self.layers = []
+        self.activations = []
+
+        input_size = 784
+        hidden_sizes = cli_args.hidden_size
+        num_layers = cli_args.num_layers
+        activation = cli_args.activation
+        weight_init = cli_args.weight_init
+
+        sizes = [input_size] + hidden_sizes + [10]
+
+        for i in range(len(sizes) - 1):
+
+            self.layers.append(Dense(sizes[i], sizes[i+1], weight_init))
+
+            if i < len(sizes) - 2:
+                if activation == "relu":
+                    self.activations.append(ReLU())
+                elif activation == "sigmoid":
+                    self.activations.append(Sigmoid())
+                elif activation == "tanh":
+                    self.activations.append(Tanh())
+
+        if cli_args.loss == "cross_entropy":
+            self.loss_fn = CrossEntropyLoss()
+        else:
+            self.loss_fn = MeanSquaredError()
+
+        self.lr = cli_args.learning_rate
+
 
     def forward(self, X):
-        """
-        Forward propagation through all layers.
-        Returns logits (no softmax applied)
-        X is shape (b, D_in) and output is shape (b, D_out).
-        b is batch size, D_in is input dimension, D_out is output dimension.
-        """
-        pass
 
-    def backward(self, y_true, y_pred):
-        """
-        Backward propagation to compute gradients.
-        Returns two numpy arrays: grad_Ws, grad_bs.
-        - `grad_Ws[0]` is gradient for the last (output) layer weights,
-          `grad_bs[0]` is gradient for the last layer biases, and so on.
-        """
+        out = X
+
+        for i in range(len(self.layers)):
+
+            out = self.layers[i].forward(out)
+
+            if i < len(self.activations):
+                out = self.activations[i].forward(out)
+
+        return out
+
+
+    def backward(self, y_true, logits):
+
+        if isinstance(self.loss_fn, CrossEntropyLoss):
+            grad = self.loss_fn.backward(y_true)
+        else:
+            grad = self.loss_fn.backward(logits, y_true)
+
         grad_W_list = []
         grad_b_list = []
 
-        # Backprop through layers in reverse; collect grads so that index 0 = last layer
+        for i in reversed(range(len(self.layers))):
 
-        # create explicit object arrays to avoid numpy trying to broadcast shapes
-        self.grad_W = np.empty(len(grad_W_list), dtype=object)
-        self.grad_b = np.empty(len(grad_b_list), dtype=object)
-        for i, (gw, gb) in enumerate(zip(grad_W_list, grad_b_list)):
-            self.grad_W[i] = gw
-            self.grad_b[i] = gb
+            if i < len(self.activations):
+                grad = self.activations[i].backward(grad)
 
-        print("Shape of grad_Ws:", self.grad_W.shape, self.grad_W[1].shape)
-        print("Shape of grad_bs:", self.grad_b.shape, self.grad_b[1].shape)
+            grad = self.layers[i].backward(grad)
+
+            grad_W_list.append(self.layers[i].grad_W)
+            grad_b_list.append(self.layers[i].grad_b)
+
+        self.grad_W = np.array(grad_W_list, dtype=object)
+        self.grad_b = np.array(grad_b_list, dtype=object)
+
         return self.grad_W, self.grad_b
 
+
     def update_weights(self):
-        pass
+
+        for layer in self.layers:
+            layer.W -= self.lr * layer.grad_W
+            layer.b -= self.lr * layer.grad_b
+
 
     def train(self, X_train, y_train, epochs=1, batch_size=32):
-        pass
+
+        n = X_train.shape[0]
+
+        for epoch in range(epochs):
+
+            indices = np.random.permutation(n)
+
+            X_train = X_train[indices]
+            y_train = y_train[indices]
+
+            for i in range(0, n, batch_size):
+
+                X_batch = X_train[i:i+batch_size]
+                y_batch = y_train[i:i+batch_size]
+
+                logits = self.forward(X_batch)
+
+                loss = self.loss_fn.forward(logits, y_batch)
+
+                self.backward(y_batch, logits)
+
+                self.update_weights()
+
+            print(f"Epoch {epoch+1} Loss: {loss}")
+
 
     def evaluate(self, X, y):
-        pass
+
+        logits = self.forward(X)
+
+        preds = np.argmax(logits, axis=1)
+        labels = np.argmax(y, axis=1)
+
+        accuracy = np.mean(preds == labels)
+
+        return accuracy
+
 
     def get_weights(self):
+
         d = {}
         for i, layer in enumerate(self.layers):
             d[f"W{i}"] = layer.W.copy()
             d[f"b{i}"] = layer.b.copy()
+
         return d
 
+
     def set_weights(self, weight_dict):
+
         for i, layer in enumerate(self.layers):
+
             w_key = f"W{i}"
             b_key = f"b{i}"
+
             if w_key in weight_dict:
                 layer.W = weight_dict[w_key].copy()
+
             if b_key in weight_dict:
                 layer.b = weight_dict[b_key].copy()
-
