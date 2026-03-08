@@ -1,6 +1,6 @@
 """
 Inference Script
-Evaluate trained models on test sets
+Evaluate trained models on validation/test sets
 """
 
 import argparse
@@ -14,9 +14,8 @@ from ann.neural_network import NeuralNetwork
 
 
 def parse_arguments():
-    # args: Command-line arguments for inference configuration, including model and config paths.
 
-    parser = argparse.ArgumentParser(description="Run inference on test set")
+    parser = argparse.ArgumentParser(description="Run inference")
 
     parser.add_argument("--config_path", type=str, default="best_config.json")
     parser.add_argument("--model_path", type=str, default="best_model.npy")
@@ -28,13 +27,29 @@ def load_model(args):
 
     print("Building network architecture...")
 
-    model = NeuralNetwork(args)
+    # rebuild hidden layer structure
+    if hasattr(args, "hidden_size") and args.hidden_size is not None:
+        hidden_sizes = args.hidden_size
+
+    elif hasattr(args, "num_layers") and args.num_layers is not None:
+        hidden_sizes = [args.num_neurons] * args.num_layers
+
+    else:
+        hidden_sizes = [args.num_neurons] * args.hidden_layers
+
+    model = NeuralNetwork(
+        input_size=784,
+        hidden_sizes=hidden_sizes,
+        output_size=10,
+        activation=args.activation,
+        weight_init=args.weight_init
+    )
 
     print("Loading saved weights...")
 
     weights = np.load(args.model_path, allow_pickle=True).item()
 
-    model.set_weights(weights)
+    model.set_parameters(weights)
 
     return model
 
@@ -79,7 +94,7 @@ def main():
 
     args = parse_arguments()
 
-    # load config
+    # load training config
     with open(args.config_path) as f:
         config = json.load(f)
 
@@ -91,6 +106,7 @@ def main():
 
     print("Loading dataset...")
 
+    # your dataloader returns train + val only
     _, _, X_test, y_test = load_data(args.dataset)
 
     print("Loading trained model...")

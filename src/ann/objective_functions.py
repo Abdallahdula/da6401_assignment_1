@@ -1,56 +1,60 @@
 """
-Loss/Objective Functions and Their Derivatives
-Implements: Cross-Entropy, Mean Squared Error (MSE)
+Loss Functions
 """
+
 import numpy as np
-
-
-class MeanSquaredError:
-
-    def forward(self, y_pred, y_true):
-        # y_pred: Predicted values from the model.
-        # y_true: Ground truth labels.
-        loss = np.mean((y_pred - y_true) ** 2)
-        return loss
-
-    def backward(self, y_pred, y_true):
-        m = y_true.shape[0]
-        grad = 2 * (y_pred - y_true) / m
-        return grad
-
 
 
 class CrossEntropyLoss:
 
-    def softmax(self, z):
-        exp = np.exp(z - np.max(z, axis=1, keepdims=True))
-        return exp / np.sum(exp, axis=1, keepdims=True)
-
     def forward(self, logits, y_true):
-        self.probs = self.softmax(logits)
-        m = y_true.shape[0]
 
-        loss = -np.sum(y_true * np.log(self.probs + 1e-9)) / m
+        self.y_true = y_true
+
+        exp = np.exp(logits - np.max(logits, axis=1, keepdims=True))
+        self.probs = exp / np.sum(exp, axis=1, keepdims=True)
+
+        loss = -np.sum(y_true * np.log(self.probs + 1e-9)) / logits.shape[0]
 
         return loss
 
 
-    def backward(self, y_true):
-        m = y_true.shape[0]
+    def backward(self):
 
-        grad = (self.probs - y_true) / m
+        batch_size = self.y_true.shape[0]
+
+        grad = (self.probs - self.y_true) / batch_size
 
         return grad
 
+
+class MeanSquaredError:
+
+    def forward(self, logits, y_true):
+
+        self.logits = logits
+        self.y_true = y_true
+
+        loss = np.mean((logits - y_true) ** 2)
+
+        return loss
+
+
+    def backward(self):
+
+        grad = 2 * (self.logits - self.y_true) / self.y_true.shape[0]
+
+        return grad
+
+
 def get_loss(name):
 
-    name = name.lower()
-
-    if name in ["cross_entropy", "crossentropy", "ce"]:
+    if name == "cross_entropy":
         return CrossEntropyLoss()
 
-    elif name in ["mse", "mean_squared_error"]:
+    elif name == "mse":
         return MeanSquaredError()
 
     else:
-        raise ValueError(f"Unknown loss function: {name}")
+        raise ValueError("Unknown loss function")
+        
