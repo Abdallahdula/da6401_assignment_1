@@ -15,9 +15,6 @@ class NeuralNetwork:
         self.layers = []
         self.activations = []
 
-        # --------------------------------
-        # Case 1: autograder -> NeuralNetwork(args)
-        # --------------------------------
         if len(args) == 1 and not kwargs:
 
             cli_args = args[0]
@@ -34,9 +31,7 @@ class NeuralNetwork:
             else:
                 hidden_sizes = [cli_args.num_neurons] * cli_args.hidden_layers
 
-        # --------------------------------
-        # Case 2: your train.py call
-        # --------------------------------
+
         else:
 
             input_size = kwargs.get("input_size", args[0] if len(args) > 0 else None)
@@ -68,7 +63,7 @@ class NeuralNetwork:
                 else:
                     raise ValueError("Unsupported activation")
 
-    # --------------------------------
+  
 
     def forward(self, X):
 
@@ -83,7 +78,6 @@ class NeuralNetwork:
 
         return output
 
-    # --------------------------------
 
     def backward(self, grad):
 
@@ -96,7 +90,7 @@ class NeuralNetwork:
 
         return grad
 
-    # --------------------------------
+
 
     def get_parameters(self):
 
@@ -108,7 +102,16 @@ class NeuralNetwork:
 
         return params
 
-    # --------------------------------
+
+
+    def set_weights(self, params):
+
+        for i, layer in enumerate(self.layers):
+
+            layer.W = params[f"W{i}"]
+            layer.b = params[f"b{i}"]
+
+ 
 
     def set_parameters(self, params):
 
