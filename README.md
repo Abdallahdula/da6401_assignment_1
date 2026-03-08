@@ -13,10 +13,45 @@ This assignment requires you to implement a neural network from scratch using on
 - Train and evaluate neural networks
 - Log experiments using Weights & Biases
 
-## Contact
+## Installation
 
-For questions or issues, please contact the teaching staff or post on the course forum.
+To install the required dependencies, run:
+```bash
+pip install -r requirements.txt
+```
 
----
+## Train Model
 
-Good luck with your implementation!
+To train the model, navigate to the `src` directory and run:
+```bash
+python train.py --dataset mnist --epochs 10 --batch_size 32 --learning_rate 0.001
+```
+
+### Example:
+```bash
+python train.py --dataset fashion_mnist --epochs 20 --batch_size 64 --learning_rate 0.0005
+```
+
+## Run Inference
+
+To evaluate the trained model, run:
+```bash
+python inference.py --model_path best_model.npy --dataset mnist
+```
+
+### Example:
+```bash
+python inference.py --model_path best_model.npy --dataset fashion_mnist
+```
+
+## Files
+
+- **train.py**: Training script for the neural network.
+- **inference.py**: Script for evaluating the trained model.
+- **best_model.npy**: Saved weights of the best-performing model.
+- **best_config.json**: Hyperparameters of the best model.
+
+
+## Assingnment Report 
+ The link below redirect to the assignment report:
+ https://wandb.ai/zda23m016-iit-madras-zanzibar/da6401-assignment1/reports/Fully-Connected-Neural-Network-for-MNIST-Fashion-MNIST-Classification--VmlldzoxNjEzNzk2NA?accessToken=rrqdw23a3aegbbdt02jfynovwennwiyragvdvsn7qz6335q96pb28l9ja1c7m5d6
