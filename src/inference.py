@@ -1,10 +1,9 @@
 """
 Inference Script
-Evaluate trained models on validation/test sets
+Evaluate trained models
 """
 
 import argparse
-import json
 import numpy as np
 from sklearn.metrics import precision_score, recall_score, f1_score
 import wandb
@@ -17,39 +16,57 @@ def parse_arguments():
 
     parser = argparse.ArgumentParser(description="Run inference")
 
-    parser.add_argument("--config_path", type=str, default="best_config.json")
+    parser.add_argument("--dataset", type=str, default="mnist",
+                        choices=["mnist", "fashion_mnist"])
+
     parser.add_argument("--model_path", type=str, default="best_model.npy")
+
+    parser.add_argument("--batch_size", type=int, default=64)
+
+    parser.add_argument("--hidden_size", type=int, nargs="+",
+                        default=[128, 128])
+
+    parser.add_argument("--activation", type=str, default="relu",
+                        choices=["relu", "sigmoid", "tanh"])
+
+    parser.add_argument("--weight_init", type=str, default="xavier")
 
     return parser.parse_args()
 
 
 def load_model(args):
 
-    print("Building network architecture...")
-
-    # rebuild hidden layer structure
-    if hasattr(args, "hidden_size") and args.hidden_size is not None:
-        hidden_sizes = args.hidden_size
-
-    elif hasattr(args, "num_layers") and args.num_layers is not None:
-        hidden_sizes = [args.num_neurons] * args.num_layers
-
-    else:
-        hidden_sizes = [args.num_neurons] * args.hidden_layers
-
-    model = NeuralNetwork(
-        input_size=784,
-        hidden_sizes=hidden_sizes,
-        output_size=10,
-        activation=args.activation,
-        weight_init=args.weight_init
-    )
-
     print("Loading saved weights...")
 
     weights = np.load(args.model_path, allow_pickle=True).item()
 
-    model.set_parameters(weights)
+    # Detect architecture from weights
+    hidden_sizes = []
+    i = 0
+
+    while f"W{i}" in weights:
+        hidden_sizes.append(weights[f"W{i}"].shape[1])
+        i += 1
+
+    # Last layer is output layer
+    output_size = hidden_sizes[-1]
+    hidden_sizes = hidden_sizes[:-1]
+
+    print("Building network architecture...")
+
+    model = NeuralNetwork(
+        input_size=784,
+        hidden_sizes=hidden_sizes,
+        output_size=output_size,
+        activation=args.activation,
+        weight_init=args.weight_init
+    )
+
+    print("Assigning weights...")
+
+    for i, layer in enumerate(model.layers):
+        layer.W = weights[f"W{i}"]
+        layer.b = weights[f"b{i}"]
 
     return model
 
@@ -83,9 +100,9 @@ def evaluate(model, X_test, y_test, batch_size):
 
     accuracy = np.mean(predictions == labels)
 
-    precision = precision_score(labels, predictions, average="weighted")
-    recall = recall_score(labels, predictions, average="weighted")
-    f1 = f1_score(labels, predictions, average="weighted")
+    precision = precision_score(labels, predictions, average="weighted", zero_division=0)
+    recall = recall_score(labels, predictions, average="weighted", zero_division=0)
+    f1 = f1_score(labels, predictions, average="weighted", zero_division=0)
 
     return accuracy, precision, recall, f1
 
@@ -94,19 +111,10 @@ def main():
 
     args = parse_arguments()
 
-    # load training config
-    with open(args.config_path) as f:
-        config = json.load(f)
-
-    # merge config into args
-    for key, value in config.items():
-        setattr(args, key, value)
-
     wandb.init(project="da6401-assignment1-inference")
 
     print("Loading dataset...")
 
-    # your dataloader returns train + val only
     _, _, X_test, y_test = load_data(args.dataset)
 
     print("Loading trained model...")
