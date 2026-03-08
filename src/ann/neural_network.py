@@ -4,21 +4,21 @@ Handles forward and backward propagation loops
 """
 
 import numpy as np
-from neural_layer import Dense
-from activations import ReLU, Sigmoid, Tanh
-from objective_functions import MeanSquaredError, CrossEntropyLoss
+from .neural_layer import Dense
+from .activations import ReLU, Sigmoid, Tanh
+from .objective_functions import MeanSquaredError, CrossEntropyLoss
 
 
 class NeuralNetwork:
 
     def __init__(self, cli_args):
+        # args: Command-line arguments containing hyperparameters such as learning rate, number of layers, activation function, etc.
 
         self.layers = []
         self.activations = []
 
         input_size = 784
         hidden_sizes = cli_args.hidden_size
-        num_layers = cli_args.num_layers
         activation = cli_args.activation
         weight_init = cli_args.weight_init
 
@@ -65,23 +65,16 @@ class NeuralNetwork:
         else:
             grad = self.loss_fn.backward(logits, y_true)
 
-        grad_W_list = []
-        grad_b_list = []
-
         for i in reversed(range(len(self.layers))):
 
+            # apply activation gradient FIRST (only for hidden layers)
             if i < len(self.activations):
                 grad = self.activations[i].backward(grad)
 
+            # then propagate through dense layer
             grad = self.layers[i].backward(grad)
 
-            grad_W_list.append(self.layers[i].grad_W)
-            grad_b_list.append(self.layers[i].grad_b)
-
-        self.grad_W = np.array(grad_W_list, dtype=object)
-        self.grad_b = np.array(grad_b_list, dtype=object)
-
-        return self.grad_W, self.grad_b
+        return grad
 
 
     def update_weights(self):

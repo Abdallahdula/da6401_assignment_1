@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+wandb/
+*.npy
+best_model.npy
+best_config.json

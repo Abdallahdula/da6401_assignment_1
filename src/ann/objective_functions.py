@@ -8,6 +8,8 @@ import numpy as np
 class MeanSquaredError:
 
     def forward(self, y_pred, y_true):
+        # y_pred: Predicted values from the model.
+        # y_true: Ground truth labels.
         loss = np.mean((y_pred - y_true) ** 2)
         return loss
 
@@ -39,3 +41,16 @@ class CrossEntropyLoss:
         grad = (self.probs - y_true) / m
 
         return grad
+
+def get_loss(name):
+
+    name = name.lower()
+
+    if name in ["cross_entropy", "crossentropy", "ce"]:
+        return CrossEntropyLoss()
+
+    elif name in ["mse", "mean_squared_error"]:
+        return MeanSquaredError()
+
+    else:
+        raise ValueError(f"Unknown loss function: {name}")

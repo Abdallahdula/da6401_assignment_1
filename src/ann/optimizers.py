@@ -1,17 +1,18 @@
 """
 Optimization Algorithms
-Implements: SGD, Momentum, Adam, Nadam, etc.
+Implements: SGD, Momentum, NAG, RMSProp, Adam, Nadam
 """
+
 import numpy as np
 
+
 class SGD:
-    def __init__(self, learning_rate=0.01):
+    def __init__(self, learning_rate=0.01):  # learning_rate: Step size for weight updates.
         self.lr = learning_rate
 
     def update(self, layer):
         if hasattr(layer, "W"):
             layer.W -= self.lr * layer.grad_W
-
         if hasattr(layer, "b"):
             layer.b -= self.lr * layer.grad_b
 
@@ -24,6 +25,7 @@ class Momentum:
         self.v_b = {}
 
     def update(self, layer):
+
         if id(layer) not in self.v_w:
             self.v_w[id(layer)] = np.zeros_like(layer.W)
             self.v_b[id(layer)] = np.zeros_like(layer.b)
@@ -166,3 +168,30 @@ class Nadam:
 
         layer.W -= self.lr * nesterov_w / (np.sqrt(v_w_hat) + self.epsilon)
         layer.b -= self.lr * nesterov_b / (np.sqrt(v_b_hat) + self.epsilon)
+
+
+
+def get_optimizer(name, learning_rate):
+
+    name = name.lower()
+
+    if name == "sgd":
+        return SGD(learning_rate)
+
+    elif name == "momentum":
+        return Momentum(learning_rate)
+
+    elif name == "nag":
+        return NAG(learning_rate)
+
+    elif name == "rmsprop":
+        return RMSProp(learning_rate)
+
+    elif name == "adam":
+        return Adam(learning_rate)
+
+    elif name == "nadam":
+        return Nadam(learning_rate)
+
+    else:
+        raise ValueError(f"Unknown optimizer: {name}")
